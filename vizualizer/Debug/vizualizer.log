@@ -1,0 +1,23 @@
+﻿  Vizualizer.cpp
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(67,12): warning C4244: '=': conversion from 'float' to 'short', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(68,12): warning C4244: '=': conversion from 'float' to 'short', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(69,12): warning C4244: '=': conversion from 'float' to 'short', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(79,26): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(79,20): warning C4244: 'initializing': conversion from 'double' to 'const int', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(89,17): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(89,9): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(91,76): warning C4244: 'argument': conversion from 'short' to 'Uint8', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(91,65): warning C4244: 'argument': conversion from 'short' to 'Uint8', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(91,54): warning C4244: 'argument': conversion from 'short' to 'Uint8', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(91,43): warning C4244: 'argument': conversion from 'short' to 'Uint8', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(101,33): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(101,9): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(106,20): warning C4018: '<': signed/unsigned mismatch
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(108,31): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(108,16): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(108,10): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(124,55): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(124,32): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(323,22): warning C4018: '<': signed/unsigned mismatch
+C:\Users\(unknown user)\source\repos\vizualizer\vizualizer\Vizualizer.cpp(331,28): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  vizualizer.vcxproj -> C:\Users\(unknown user)\source\repos\vizualizer\Debug\vizualizer.exe
