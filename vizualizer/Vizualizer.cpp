@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <deque>
+#include "FFT.h"
 
 //map(value, value range from, to, map from, to)
 float map(float value, float start1, float stop1, float start2, float stop2) {
@@ -73,11 +75,23 @@ led operator*(led a, float b) {
 //null led
 const led NULL_LED = { 0, 0, 0};
 
+//smoothed fill
+void setVector(CArray& carray, std::vector<double>& vec) {
+	for (int i = 0; i < carray.size(); i++) {
+		if (abs(std::real(carray[i])) > abs(vec[i])) {
+			vec[i] = std::real(carray[i]);
+		}
+		/*else {
+			//vec[i] = (std::real(carray[i]) + vec[i]);// / 2;
+		}*/
+	}
+}
+
 //defining specs
-const int WINDOW_WIDTH = 1920;
-const int LED_NR = 50;
+const int WINDOW_WIDTH = 1280;
+const int LED_NR = 90;
 const int LED_SIZE = ceil(WINDOW_WIDTH / (LED_NR*1.5));
-const int WINDOW_HEIGHT = 1080;//LED_SIZE*5;
+const int WINDOW_HEIGHT = 720;//LED_SIZE*5;
 
 // Pointers to our window and renderer
 SDL_Window* window;
@@ -95,20 +109,70 @@ void drawLEDs(std::vector<led>& leds) {
 	SDL_RenderPresent(renderer);
 }
 
-void drawWave(std::vector<int8_t> wave) {
+//draw from Carray
+void drawWave(CArray wave) {
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
 	int x1 = map(0, 0, wave.size() - 1, 0, WINDOW_WIDTH);
-	int y1; 
+	int y1 = WINDOW_HEIGHT -LED_SIZE;//WINDOW_HEIGHT/2 - std::real(wave[0]);
+	
+	for (int i = 1; i < wave.size()/2; i++) {
+		//int amp = sqrt(sqrt(std::real(wave[i]) * std::real(wave[i]) + std::imag(wave[i]) * std::imag(wave[i])));
+		int amp = (abs(std::real(wave[i])));
+		//std::cout << amp << "\n";
+		int y2 = WINDOW_HEIGHT - LED_SIZE - amp;// (abs(std::real(wave[i])) / 10);//pow(-1, i) * 
+		int x2 = map(i, 1, wave.size()/2, 10, WINDOW_WIDTH-10);
+		//std::cout <<  wave[i] << " ";
+		SDL_SetRenderDrawColor(renderer, 0,map(i, 1, wave.size()/2,0 , 255), 255- map(i, 1, wave.size(), 0, 255), 255);
+		SDL_Rect temp = { x2, y2, 3, amp };
+		SDL_RenderFillRect(renderer, &temp);
+		//SDL_RenderDrawLine(renderer,x2, y1, x2, y2);
+		//x1 = x2;
+		//y1 = y2;
+	}
+	SDL_RenderPresent(renderer);
+}
+
+//draw from vector
+void drawWave(std::vector<double> wave) {
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderClear(renderer);
+	int x1 = map(0, 0, wave.size() - 1, 0, WINDOW_WIDTH);
+	int y1 = WINDOW_HEIGHT - LED_SIZE;//WINDOW_HEIGHT/2 - std::real(wave[0]);
+
+	for (int i = 1; i < wave.size() / 2; i++) {
+		//int amp = sqrt(sqrt(std::real(wave[i]) * std::real(wave[i]) + std::imag(wave[i]) * std::imag(wave[i])));
+		int amp = (abs(wave[i]));
+		//std::cout << amp << "\n";
+		int y2 = WINDOW_HEIGHT - LED_SIZE - amp;// (abs(std::real(wave[i])) / 10);//pow(-1, i) * 
+		int x2 = map(i, 1, wave.size() / 2, 10, WINDOW_WIDTH - 10);
+		//std::cout <<  wave[i] << " ";
+		SDL_SetRenderDrawColor(renderer, 0, map(i, 0, wave.size() / 2, 0, 255), 255 - map(i, 1, wave.size(), 0, 255), 255);
+		SDL_Rect temp = { x2, y2, 5, amp };
+		SDL_RenderFillRect(renderer, &temp);
+		//SDL_RenderDrawLine(renderer,x2, y1, x2, y2);
+		//x1 = x2;
+		//y1 = y2;
+		if (!i) i++;
+	}
+	SDL_RenderPresent(renderer);
+}
+
+///
+void drawDeque(std::deque<int8_t> wave) {
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderClear(renderer);
+	int x1 = map(0, 0, wave.size() - 1, 0, WINDOW_WIDTH);
+	int y1;
 	if (wave.size()) y1 = (WINDOW_HEIGHT / 2) - wave[0];
-	
-	
+
+
 	for (int i = 1; i < wave.size(); i++) {
-		int y2 = (WINDOW_HEIGHT / 2) +  (wave[i]*2);//pow(-1, i) *
+		int y2 = (WINDOW_HEIGHT / 2) + pow(-1, i) * (wave[i] * 3);//pow(-1, i) *
 		int x2 = map(i, 1, wave.size(), 0, WINDOW_WIDTH);
 		//std::cout <<  wave[i] << " ";
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-		//SDL_Rect temp = { x1, y1, x2-x1, y2-y1 };
+		SDL_SetRenderDrawColor(renderer, 0, map(i, 1, wave.size(), 0, 255), 255 - map(i, 1, wave.size(), 0, 255), 255);
+		//SDL_Rect temp = { x1, y1, x2 - x1, y2 - y1 };
 		//SDL_RenderFillRect(renderer, &temp);
 		SDL_RenderDrawLine(renderer,x1, y1, x2, y2);
 		x1 = x2;
@@ -117,11 +181,28 @@ void drawWave(std::vector<int8_t> wave) {
 	SDL_RenderPresent(renderer);
 }
 
-//draws the led strip
-void clearLEDs(std::vector<led>& leds) {
-	led temp = { 20, 20, 20 };
+//dims the led strip
+void dimLEDs(std::vector<led>& leds) {
+	led temp = { 64, 64, 64 };
 	for (int i = 0; i < LED_NR; i++) {
-		leds[i] = leds[i] - temp*map(i, 0, LED_NR, 0.15, 1.0);
+		leds[i] = leds[i] - temp;// *(long)map(i, 0, LED_NR, 0.15, 1.0);
+	}
+}
+
+#define dampSpeed 1.0005
+//dampens wave values
+void dampenWave(std::vector<double>& wave) {
+	//led temp = { 64, 64, 64 };
+	//std::vector<double> temp = wave;
+	for (int i = 0; i < wave.size(); i++) {
+		wave[i] /= dampSpeed;
+		/*if (wave[i] < 0) {
+			wave[i] = wave[i] + dampSpeed; //*map(i, 0, 65536, 1.0, 0.15);
+		}
+		else {
+			wave[i] = wave[i] - dampSpeed; //*map(i, 0, 65536, 1.0, 0.15);
+		}*/
+		//wave[i] = (temp[i - 1] + temp[i + 1] + temp[i]) / 3;
 	}
 }
 
@@ -141,6 +222,7 @@ void shiftLEDs(std::vector<led>& leds) {
 #define Channels 1
 #define SampleRate 128
 #define RefreshRate 64
+int DeviceID = 0;
 
 //audioBuffer
 Sint8* gRecordingBuffer = NULL;
@@ -175,6 +257,26 @@ bool InitSound() {
 	return success;
 }
 
+void close()
+{
+	
+	//Destroy window	
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	window = NULL;
+	renderer = NULL;
+
+	//Free playback audio
+	if (gRecordingBuffer != NULL)
+	{
+		delete[] gRecordingBuffer;
+		gRecordingBuffer = NULL;
+	}
+
+	//Quit SDL subsystems
+	SDL_Quit();
+}
+
 //Recording callback
 void audioRecordingCallback(void* userdata, Uint8* stream, int len)
 {
@@ -201,16 +303,26 @@ int main(int argc, char** args) {
 	SDL_AudioDeviceID recordingDeviceId = 0;
 	SDL_AudioDeviceID playbackDeviceId = 0;
 
+
+	//initialize sound subsystem
+	if (!InitSound()) {
+		std::cout << "Failed to initalize sound subsystem!\n";
+	}
+
+	for (int i = 0; i < SDL_GetNumAudioDevices(SDL_TRUE); i++) {
+		std::cout << i << ": " << SDL_GetAudioDeviceName(i, SDL_TRUE) << "\n";
+	}
+
+	std::cout << "Please select a microphone: ";
+	std::cin >> DeviceID; std::cin.ignore();
+
 	//Initialize rendering window
 	int result = SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, NULL, &window, &renderer);
 	if (result != 0) {
 		std::cout << "Failed to create window and renderer: " << SDL_GetError() << "\n";
 	}
 
-	//initialize sound subsystem
-	if (!InitSound()) {
-		std::cout << "Failed to initalize sound subsystem!\n";
-	}
+	//SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 	//open mic
 	SDL_AudioSpec desiredRecordingSpec;
@@ -221,12 +333,12 @@ int main(int argc, char** args) {
 	desiredRecordingSpec.samples = SampleRate;
 	desiredRecordingSpec.callback = audioRecordingCallback;
 
-	recordingDeviceId = SDL_OpenAudioDevice(NULL, SDL_TRUE, &desiredRecordingSpec, &gReceivedRecordingSpec, 0);
+	recordingDeviceId = SDL_OpenAudioDevice(SDL_GetAudioDeviceName(DeviceID, SDL_TRUE), SDL_TRUE, &desiredRecordingSpec, &gReceivedRecordingSpec, 0);
 
 	if (recordingDeviceId == 0){
 		//Report error
 		std::cout << "Failed to open recording device! SDL Error: %s" <<  SDL_GetError();
-	} else {
+	}/* else {
 		//Default audio spec
 		SDL_AudioSpec desiredPlaybackSpec;
 		SDL_zero(desiredPlaybackSpec);
@@ -243,7 +355,7 @@ int main(int argc, char** args) {
 		//Report error
 		std::cout << "Failed to open recording device! SDL Error: %s" << SDL_GetError();
 	} 
-	
+	*/
 	//Calculate per sample bytes
 	int bytesPerSample = gReceivedRecordingSpec.channels * (SDL_AUDIO_BITSIZE(gReceivedRecordingSpec.format) / 8);
 
@@ -266,7 +378,7 @@ int main(int argc, char** args) {
 	std::vector<led> leds(LED_NR, NULL_LED), test(LED_NR, NULL_LED);
 	if (1) {
 		short r = 255, g = 0, b = 0, temp = 0;
-		int loop = 1;
+		int loop = 2;
 
 		while (loop) {
 			for (int i = 0; i < 255; i += 1) {
@@ -291,7 +403,6 @@ int main(int argc, char** args) {
 					break;
 				case 6:
 					loop--;
-					std::cout << loop << "\n";
 					i = 256;
 					break;
 				}
@@ -310,35 +421,58 @@ int main(int argc, char** args) {
 	gBufferBytePosition = 0;
 	SDL_PauseAudioDevice(recordingDeviceId, SDL_FALSE);
 	//SDL_PauseAudioDevice(playbackDeviceId, SDL_TRUE);
+	std::deque<int8_t> wave2;
+	std::vector<double> final(gBufferByteMaxPosition, 0);
+	bool quit = false;
+	int count = 0;
+	SDL_Event e;
+	CArray wave(gBufferByteMaxPosition);
 
-	while (1) {
+	while (!quit) {
+		SDL_PollEvent(&e);
 		//std::cout << gBufferBytePosition << " ";
+		if (e.type == SDL_QUIT)
+		{
+			quit = true;
+		}
 		
+		dampenWave(final);
+
 		if (gBufferBytePosition > gBufferByteMaxPosition){
 			SDL_LockAudioDevice(recordingDeviceId);
 			gBufferBytePosition = 0;
 			//int maxVol = 0;
-			std::vector<int8_t> wave;
+			//std::vector<int8_t> wave;
+
 			int maxVol = 0;
-			for (int i = 0; i < gBufferByteMaxPosition; i+=2) {
-				wave.push_back((int8_t)gRecordingBuffer[i]);
+			for (int i = 0; i < gBufferByteMaxPosition; i++) {
+
+				//wave.push_back((int8_t)gRecordingBuffer[i]);
+				wave[i] = { (double)gRecordingBuffer[i],0 };
+				//wave2.push_back((int8_t)gRecordingBuffer[i]);
+				//if (wave2.size() > gBufferByteMaxPosition*8) wave2.pop_front();
 				if ((int8_t)gRecordingBuffer[i] > maxVol) {
 					maxVol = (int8_t)gRecordingBuffer[i];
 				}
 			}
-			std::cout << "\n" << maxVol;
-			clearLEDs(leds);
+			//std::cout << "\n" << maxVol;
+			/*dimLEDs(leds);
 			for (int i = 0; i < map(maxVol, 0, 128, 1, LED_NR); i++) {
 				leds[i] = test[i];
-			}
-			//drawWave(wave);
-			drawLEDs(leds);
+			}*/
 			
+			fft(wave);
+
+			setVector(wave, final);
+
+			//drawDeque(wave2);
+			drawWave(final);
+			//drawLEDs(leds);
 			SDL_UnlockAudioDevice(recordingDeviceId);
 		}
 	}
 	//stop
-	SDL_PauseAudioDevice(recordingDeviceId, SDL_TRUE);
+	close();
 	//rainbow loop test
 	/*{
 		short r = 255, g = 0, b = 0, temp = 0;
@@ -382,10 +516,6 @@ int main(int argc, char** args) {
 			temp++;
 		}
 	}*/
-
-
-
-	SDL_Delay(3000);
 	
 	return 0;
 }
