@@ -30,52 +30,87 @@ class led {
 			this->g = g;
 			this->b = b;
 		}
-};
 
-//led class == operator overload
-bool operator==(led a, led b){
-	if (a.r != b.r) return false;
-	if (a.g != b.g) return false;
-	if (a.b != b.b) return false;
-	return true;
-}
+		void SetColorHue(int a) {
+			if (a < 0 || a > 1536) {
+				std::cout << "invalid number\n";
+			}
+			this->r = 0;
+			this->g = 0;
+			this->b = 0;
+
+			switch (a / 256) {
+			case 0: 
+				this->r = 255;
+				this->g = a % 256;
+				break;
+			case 1:
+				this->r = 255 - (a % 256);
+				this->g = 255;
+				break;
+			case 2:
+				this->g = 255;
+				this->b = a % 256;
+				break;
+			case 3:
+				this->g = 255 - (a % 256);
+				this->b = 255;
+				break;
+			case 4:
+				this->r = a % 256;
+				this->b = 255;
+				break;
+			case 5:
+				this->b = 255 - (a % 256);
+				this->r = 255;
+				break;
+			case 6:
+				this->r = 255;
+				break;
+			}
+		}
+
+		bool operator==(led b) {
+			if (this->r != b.r) return false;
+			if (this->g != b.g) return false;
+			if (this->b != b.b) return false;
+			return true;
+		}
+		
+		led operator+(led b) {
+			led s;
+			s.r = std::min(this->r + b.r, 255);
+			s.g = std::min(this->g + b.g, 255);
+			s.b = std::min(this->b + b.b, 255);
+			return s;
+		}
+
+		led operator-(led b) {
+			led s;
+			s.r = std::max(this->r - b.r, 0);
+			s.g = std::max(this->g - b.g, 0);
+			s.b = std::max(this->b - b.b, 0);
+			return s;
+		}
+
+		led operator*(float b) {
+			led s;
+			s.r = mmin(this->r * b, 255.0);
+			s.g = mmin(this->g * b, 255.0);
+			s.b = mmin(this->b * b, 255.0);
+			return s;
+		}
+};
 
 //led class != operator overload
 bool operator!=(led a, led b) {
 	return !(a == b);
 }
 
-//led class + operator overload
-led operator+(led a, led b) {
-	led s;
-	s.r = std::min(a.r + b.r, 255);
-	s.g = std::min(a.g + b.g, 255);
-	s.b = std::min(a.b + b.b, 255);
-	return s;
-}
-
-//led class - operator overload
-led operator-(led a, led b) {
-	led s;
-	s.r = std::max(a.r - b.r, 0);
-	s.g = std::max(a.g - b.g, 0);
-	s.b = std::max(a.b - b.b, 0);
-	return s;
-}
-
-//led class * operator overload
-led operator*(led a, float b) {
-	led s;
-	s.r = mmin(a.r * b, 255.0);
-	s.g = mmin(a.g * b, 255.0);
-	s.b = mmin(a.b * b, 255.0);
-	return s;
-}
-
 //null led
 const led NULL_LED = { 0, 0, 0};
 
-//smoothed fill
+//smoothed out fill
 void setVector(CArray& carray, std::vector<double>& vec) {
 	for (int i = 0; i < carray.size(); i++) {
 		if (abs(std::real(carray[i])) > abs(vec[i])) {
@@ -298,6 +333,14 @@ void audioPlaybackCallback(void* userdata, Uint8* stream, int len)
 	gBufferBytePosition += len;
 }
 
+//Check frequencies
+//////////////////////////////////
+
+//Checks bass volume
+double checkBass(std::vector<double> freq) {
+	return std::max(std::max(abs(freq[0]), abs(freq[1])), abs(freq[2]));
+}
+
 int main(int argc, char** args) {
 
 	SDL_AudioDeviceID recordingDeviceId = 0;
@@ -427,6 +470,7 @@ int main(int argc, char** args) {
 	int count = 0;
 	SDL_Event e;
 	CArray wave(gBufferByteMaxPosition);
+	double maxBass = 0;
 
 	while (!quit) {
 		SDL_PollEvent(&e);
@@ -461,13 +505,27 @@ int main(int argc, char** args) {
 				leds[i] = test[i];
 			}*/
 			
+			
+
 			fft(wave);
 
 			setVector(wave, final);
 
 			//drawDeque(wave2);
-			drawWave(final);
-			//drawLEDs(leds);
+			//drawWave(final);
+
+			double bass = checkBass(final);
+
+			maxBass = std::max(bass, maxBass);
+
+			count += (int)map(bass, 0, maxBass, 0, 128);
+
+			for (int i = 0; i < LED_NR; i++) {
+				leds[i].SetColorHue((count + i*4) % 1536);
+			}
+
+			drawLEDs(leds);
+			count++;
 			SDL_UnlockAudioDevice(recordingDeviceId);
 		}
 	}
