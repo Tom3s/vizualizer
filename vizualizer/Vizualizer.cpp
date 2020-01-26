@@ -6,6 +6,12 @@
 #include <deque>
 #include "FFT.h"
 
+//defining specs
+const int WINDOW_WIDTH = 1280;
+const int LED_NR = 90;
+const int LED_SIZE = ceil(WINDOW_WIDTH / (LED_NR * 1.5));
+const int WINDOW_HEIGHT = 720;//LED_SIZE*5;
+
 //map(value, value range from, to, map from, to)
 float map(float value, float start1, float stop1, float start2, float stop2) {
 	float outgoing = start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
@@ -33,7 +39,7 @@ class led {
 
 		void SetColorHue(int a) {
 			if (a < 0 || a > 1536) {
-				std::cout << "invalid number\n";
+				std::cout << "invalid hue number: " << a << "\n";
 			}
 			this->r = 0;
 			this->g = 0;
@@ -70,11 +76,25 @@ class led {
 			}
 		}
 
+		void SetBrightness(float a) {
+			*this = *this * a;
+		}
+
+		float maxBrightness() {
+			float temp = map(std::max(std::max(this->r, this->g), this->b), 0, 255, 0.0, 1.0);
+			return temp;
+		}
+
 		bool operator==(led b) {
 			if (this->r != b.r) return false;
 			if (this->g != b.g) return false;
 			if (this->b != b.b) return false;
 			return true;
+		}
+
+		//led class != operator overload
+		bool operator!=(led b) {
+			return !(*this == b);
 		}
 		
 		led operator+(led b) {
@@ -102,17 +122,48 @@ class led {
 		}
 };
 
-//led class != operator overload
-bool operator!=(led a, led b) {
-	return !(a == b);
-}
+
 
 //null led
 const led NULL_LED = { 0, 0, 0};
 
+enum effectType {
+	BEAM,
+
+};
+
+class lightBeam {
+	public:
+		int position = 0;
+		float initialSpeed = 3;
+		float speed = initialSpeed;
+		int length = 8;
+
+		//update the position and show it on the led strip
+		void update(std::vector<led> &leds) {
+			led full = { 255, 255, 255 };
+			for (int j = position; j > std::max(position - length, 0); j--) {
+				int color = map(j, position, position - j, 255, 0);
+				led temp = { color, color, color };
+				leds[j] = leds[j] + temp;// +(full * map(j, position, position - j, 1.0, 0.0));
+			}
+			position += speed;
+			speed = (initialSpeed + speed) / 2;
+		}
+};
+
+//average
+double average(std::vector<double> vec, int from, int to) {
+	double temp = 0;
+	for (int i = from; i < to; i++) {
+		temp += vec[i];
+	}
+	return temp / (to - from);
+}
+
 //smoothed out fill
 void setVector(CArray& carray, std::vector<double>& vec) {
-	for (int i = 0; i < carray.size(); i++) {
+	for (int i = 0; i < carray.size() / 2; i++) {
 		if (abs(std::real(carray[i])) > abs(vec[i])) {
 			vec[i] = std::real(carray[i]);
 		}
@@ -122,11 +173,37 @@ void setVector(CArray& carray, std::vector<double>& vec) {
 	}
 }
 
-//defining specs
-const int WINDOW_WIDTH = 1280;
-const int LED_NR = 90;
-const int LED_SIZE = ceil(WINDOW_WIDTH / (LED_NR*1.5));
-const int WINDOW_HEIGHT = 720;//LED_SIZE*5;
+#define top_bar 16
+#define bottom_bar_highs 17
+
+//smooth out vector
+std::vector<double> smoothMidtones(std::vector<double> &vec) {
+	std::vector<double> temp(top_bar - 3, 0);
+	for (int i = 3; i < top_bar; i++) {
+		temp[i - 3] = average(vec, i, i + 5);
+	}
+	return temp;
+}
+
+//AVG with abs
+double ABSaverage(std::vector<double> vec, int from, int to) {
+	double temp = 0;
+	for (int i = from; i < to; i++) {
+		temp += abs(vec[i]);
+	}
+	return temp / (to - from);
+}
+
+//checks ratio between highest high note and the average of them
+double checkHighs(std::vector<double> vec) {
+	double highest = 0;
+	for (int i = bottom_bar_highs; i < vec.size(); i++) {
+		highest = std::max(highest, abs(vec[i]));
+	}
+	return highest / ABSaverage(vec, bottom_bar_highs, vec.size());
+}
+
+
 
 // Pointers to our window and renderer
 SDL_Window* window;
@@ -175,14 +252,14 @@ void drawWave(std::vector<double> wave) {
 	int x1 = map(0, 0, wave.size() - 1, 0, WINDOW_WIDTH);
 	int y1 = WINDOW_HEIGHT - LED_SIZE;//WINDOW_HEIGHT/2 - std::real(wave[0]);
 
-	for (int i = 1; i < wave.size() / 2; i++) {
+	for (int i = 1; i < wave.size(); i++) {
 		//int amp = sqrt(sqrt(std::real(wave[i]) * std::real(wave[i]) + std::imag(wave[i]) * std::imag(wave[i])));
 		int amp = (abs(wave[i]));
 		//std::cout << amp << "\n";
 		int y2 = WINDOW_HEIGHT - LED_SIZE - amp;// (abs(std::real(wave[i])) / 10);//pow(-1, i) * 
-		int x2 = map(i, 1, wave.size() / 2, 10, WINDOW_WIDTH - 10);
+		int x2 = map(i, 1, wave.size(), 10, WINDOW_WIDTH - 10);
 		//std::cout <<  wave[i] << " ";
-		SDL_SetRenderDrawColor(renderer, 0, map(i, 0, wave.size() / 2, 0, 255), 255 - map(i, 1, wave.size(), 0, 255), 255);
+		SDL_SetRenderDrawColor(renderer, 0, map(i, 0, wave.size(), 0, 255), 255 - map(i, 1, wave.size(), 0, 255), 255);
 		SDL_Rect temp = { x2, y2, 5, amp };
 		SDL_RenderFillRect(renderer, &temp);
 		//SDL_RenderDrawLine(renderer,x2, y1, x2, y2);
@@ -221,6 +298,12 @@ void dimLEDs(std::vector<led>& leds) {
 	led temp = { 64, 64, 64 };
 	for (int i = 0; i < LED_NR; i++) {
 		leds[i] = leds[i] - temp;// *(long)map(i, 0, LED_NR, 0.15, 1.0);
+	}
+}
+
+void clearLEDs(std::vector<led>& leds) {
+	for (int i = 0; i < LED_NR; i++){
+		leds[i] = NULL_LED;
 	}
 }
 
@@ -341,6 +424,15 @@ double checkBass(std::vector<double> freq) {
 	return std::max(std::max(abs(freq[0]), abs(freq[1])), abs(freq[2]));
 }
 
+//return loudest midtone
+double maxVolume(std::vector<double> vec) {
+	double maxVol = 0;
+	for (int i = 0; i < vec.size(); i++) {
+		maxVol = std::max(vec[i], maxVol);
+	}
+	return maxVol;
+}
+
 int main(int argc, char** args) {
 
 	SDL_AudioDeviceID recordingDeviceId = 0;
@@ -407,7 +499,7 @@ int main(int argc, char** args) {
 
 	//Calculate buffer size (1 sec/ refreshrate ...)
 	gBufferByteMaxPosition = bytesPerSecond/RefreshRate;
-	std::cout << gBufferByteMaxPosition;
+	//std::cout << gBufferByteMaxPosition;
 	gBufferByteSize = bytesPerSecond;
 
 
@@ -465,12 +557,13 @@ int main(int argc, char** args) {
 	SDL_PauseAudioDevice(recordingDeviceId, SDL_FALSE);
 	//SDL_PauseAudioDevice(playbackDeviceId, SDL_TRUE);
 	std::deque<int8_t> wave2;
-	std::vector<double> final(gBufferByteMaxPosition, 0);
+	std::vector<double> final(gBufferByteMaxPosition/2, 0);
+	std::vector<lightBeam> beams;
 	bool quit = false;
-	int count = 0;
+	int bassPhase = 0, maxCooldown = 16, cooldown = 0;
 	SDL_Event e;
 	CArray wave(gBufferByteMaxPosition);
-	double maxBass = 0;
+	double maxBass = 0, maxMidtone = 0;
 
 	while (!quit) {
 		SDL_PollEvent(&e);
@@ -500,8 +593,8 @@ int main(int argc, char** args) {
 				}
 			}
 			//std::cout << "\n" << maxVol;
-			/*dimLEDs(leds);
-			for (int i = 0; i < map(maxVol, 0, 128, 1, LED_NR); i++) {
+			clearLEDs(leds);
+			/*for (int i = 0; i < map(maxVol, 0, 128, 1, LED_NR); i++) {
 				leds[i] = test[i];
 			}*/
 			
@@ -511,21 +604,64 @@ int main(int argc, char** args) {
 
 			setVector(wave, final);
 
+			//smoothMidtones(final);
+
 			//drawDeque(wave2);
-			//drawWave(final);
 
 			double bass = checkBass(final);
+			std::vector<double> midtones = smoothMidtones(final);
+			double highRatio = checkHighs(final);
+
+			//std::cout << highRatio << "\n";
+
+			//drawWave(final);
 
 			maxBass = std::max(bass, maxBass);
+			maxMidtone = std::max(maxVolume(midtones), maxMidtone);
 
-			count += (int)map(bass, 0, maxBass, 0, 128);
+			if (highRatio >= 10 && cooldown <= 0) {
+				lightBeam temp;
+				beams.push_back(temp);
+				cooldown = maxCooldown;
+			}
+
+			bassPhase += (int)map(bass, 0, maxBass, 0, 64);
 
 			for (int i = 0; i < LED_NR; i++) {
-				leds[i].SetColorHue((count + i*4) % 1536);
+
+				leds[i].SetBrightness(0.90);
+
+				float targetBrightness = map(maxVolume(midtones), 0, maxMidtone*0.8, 0.25, 1.0);
+				//float targetBrightness = map(midtones[map(i, 0, LED_NR - 1, 0, midtones.size() - 1)], 0, maxMidtone, 0.3, 1.0);
+				bool setBrightness = true;
+
+				if (leds[i].maxBrightness() > targetBrightness) setBrightness = false;
+
+				//set the color based on bass
+				leds[i].SetColorHue((bassPhase + i*2) % 1536);
+
+				//set the brightness based on midtone volume
+				
+				
+				
+				 //if (setBrightness) 
+					 leds[i].SetBrightness(targetBrightness);
+			}
+
+			for (int i = 0; i < beams.size(); i++) {
+				if (beams[i].position >= LED_NR) {
+					beams.erase(beams.begin() + i);
+					i--;
+				}
+				else {
+					beams[i].speed = (int)map(bass, 0, maxBass, beams[i].initialSpeed, beams[i].initialSpeed*3);
+					beams[i].update(leds);
+				}
 			}
 
 			drawLEDs(leds);
-			count++;
+			bassPhase++;
+			cooldown--;
 			SDL_UnlockAudioDevice(recordingDeviceId);
 		}
 	}
