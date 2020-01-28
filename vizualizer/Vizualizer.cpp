@@ -137,15 +137,18 @@ class lightBeam {
 		int position = 0;
 		float initialSpeed = 3;
 		float speed = initialSpeed;
-		int length = 8;
+		int length = 10;
 
 		//update the position and show it on the led strip
 		void update(std::vector<led> &leds) {
 			led full = { 255, 255, 255 };
 			for (int j = position; j > std::max(position - length, 0); j--) {
-				int color = map(j, position, position - j, 255, 0);
-				led temp = { color, color, color };
-				leds[j] = leds[j] + temp;// +(full * map(j, position, position - j, 1.0, 0.0));
+				//int color = map(j, position, position - length, 255, 0);
+				//led temp = { 0, 0, color };
+				leds[j] = leds[j] + (full * map(j, position, position - length, 1, 0.0));
+				//leds[j].r = color;//mmax(leds[j].r, color);// +(full * map(j, position, position - j, 1.0, 0.0));
+				//leds[j].g = color;// mmax(leds[j].g, color);
+				//leds[j].b = color;//mmax(leds[j].b, color);
 			}
 			position += speed;
 			speed = (initialSpeed + speed) / 2;
@@ -165,7 +168,7 @@ double average(std::vector<double> vec, int from, int to) {
 void setVector(CArray& carray, std::vector<double>& vec) {
 	for (int i = 0; i < carray.size() / 2; i++) {
 		if (abs(std::real(carray[i])) > abs(vec[i])) {
-			vec[i] = std::real(carray[i]);
+			vec[i] = abs(std::real(carray[i]));
 		}
 		/*else {
 			//vec[i] = (std::real(carray[i]) + vec[i]);// / 2;
@@ -560,7 +563,8 @@ int main(int argc, char** args) {
 	std::vector<double> final(gBufferByteMaxPosition/2, 0);
 	std::vector<lightBeam> beams;
 	bool quit = false;
-	int bassPhase = 0, maxCooldown = 16, cooldown = 0;
+	uint32_t bassPhase = 0;
+	int maxCooldown = 12, cooldown = 0;
 	SDL_Event e;
 	CArray wave(gBufferByteMaxPosition);
 	double maxBass = 0, maxMidtone = 0;
@@ -610,7 +614,7 @@ int main(int argc, char** args) {
 
 			double bass = checkBass(final);
 			std::vector<double> midtones = smoothMidtones(final);
-			double highRatio = checkHighs(final);
+			//double highRatio = bass / average(final, 0, 2);//checkHighs(final);
 
 			//std::cout << highRatio << "\n";
 
@@ -619,13 +623,13 @@ int main(int argc, char** args) {
 			maxBass = std::max(bass, maxBass);
 			maxMidtone = std::max(maxVolume(midtones), maxMidtone);
 
-			if (highRatio >= 10 && cooldown <= 0) {
+			if (bass >= maxBass*0.55 && cooldown <= 0) {
 				lightBeam temp;
 				beams.push_back(temp);
 				cooldown = maxCooldown;
 			}
 
-			bassPhase += (int)map(bass, 0, maxBass, 0, 64);
+			bassPhase += (int)map(bass, 0, maxBass, 0, 32);
 
 			for (int i = 0; i < LED_NR; i++) {
 
@@ -667,49 +671,6 @@ int main(int argc, char** args) {
 	}
 	//stop
 	close();
-	//rainbow loop test
-	/*{
-		short r = 255, g = 0, b = 0, temp = 0;
-		int loop = 10;
-
-		while (loop) {
-			for (int i = 0; i < 255; i++) {
-				switch (temp % 7) {
-				case 0:
-					g++;
-					break;
-				case 1:
-					r--;
-					break;
-				case 2:
-					b++;
-					break;
-				case 3:
-					g--;
-					break;
-				case 4:
-					r++;
-					break;
-				case 5:
-					b--;
-					break;
-				case 6:
-					loop--;
-					std::cout << loop << "\n";
-					i = 256;
-					break;
-				}
-				if (i % 10 == 0) shiftLEDs(leds);
-				leds[0].SetColor(r, g, b);
-				if (leds[LED_NR - 1] != NULL_LED) {
-					drawLEDs(leds);
-					SDL_RenderPresent(renderer);
-					SDL_Delay(1);
-				}
-			}
-			temp++;
-		}
-	}*/
 	
 	return 0;
 }
