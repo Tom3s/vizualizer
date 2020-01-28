@@ -10,7 +10,7 @@
 const int WINDOW_WIDTH = 1280;
 const int LED_NR = 90;
 const int LED_SIZE = ceil(WINDOW_WIDTH / (LED_NR * 1.5));
-const int WINDOW_HEIGHT = 720;//LED_SIZE*5;
+const int WINDOW_HEIGHT = LED_SIZE*10;
 
 //map(value, value range from, to, map from, to)
 float map(float value, float start1, float stop1, float start2, float stop2) {
@@ -635,7 +635,7 @@ int main(int argc, char** args) {
 
 				leds[i].SetBrightness(0.90);
 
-				float targetBrightness = map(maxVolume(midtones), 0, maxMidtone*0.8, 0.25, 1.0);
+				float targetBrightness = map(maxVolume(midtones), 0, maxMidtone*0.8, 0.05, 1.0);
 				//float targetBrightness = map(midtones[map(i, 0, LED_NR - 1, 0, midtones.size() - 1)], 0, maxMidtone, 0.3, 1.0);
 				bool setBrightness = true;
 

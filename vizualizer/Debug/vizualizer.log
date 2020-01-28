@@ -61,6 +61,7 @@ C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(589,22
 C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(632,35): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
 C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(632,26): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
 C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(636,31): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(638,83): warning C4305: 'argument': truncation from 'double' to 'float'
 C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(638,68): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
 C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(638,43): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
 C:\Users\(unknown user)\source\repos\Vizualizer\vizualizer\Vizualizer.cpp(655,22): warning C4018: '<': signed/unsigned mismatch
