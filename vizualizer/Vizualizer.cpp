@@ -7,10 +7,10 @@
 #include "FFT.h"
 
 //defining specs
-const int WINDOW_WIDTH = 1280;
+const int WINDOW_WIDTH = 1920;
 const int LED_NR = 90;
 const int LED_SIZE = ceil(WINDOW_WIDTH / (LED_NR * 1.5));
-const int WINDOW_HEIGHT = LED_SIZE*10;
+const int WINDOW_HEIGHT = 1080;//LED_SIZE*10;
 
 //map(value, value range from, to, map from, to)
 float map(float value, float start1, float stop1, float start2, float stop2) {
@@ -30,8 +30,8 @@ float mmin(float a, float b) {
 //led class
 class led {
 	public:
-		short r, g, b, a = 255;
-		void SetColor(short r, short g, short b) {
+		uint8_t r, g, b, a = 255;
+		void SetColor(uint8_t r, uint8_t g, uint8_t b) {
 			this->r = r;
 			this->g = g;
 			this->b = b;
@@ -161,7 +161,7 @@ double average(std::vector<double> vec, int from, int to) {
 	for (int i = from; i < to; i++) {
 		temp += vec[i];
 	}
-	return temp / (to - from);
+	return temp / (to - from + 1);
 }
 
 //smoothed out fill
@@ -176,14 +176,14 @@ void setVector(CArray& carray, std::vector<double>& vec) {
 	}
 }
 
-#define top_bar 16
+#define top_bar 20
 #define bottom_bar_highs 17
 
 //smooth out vector
 std::vector<double> smoothMidtones(std::vector<double> &vec) {
 	std::vector<double> temp(top_bar - 3, 0);
 	for (int i = 3; i < top_bar; i++) {
-		temp[i - 3] = average(vec, i, i + 5);
+		temp[i - 3] = average(vec, i, i + 4);
 	}
 	return temp;
 }
@@ -194,7 +194,7 @@ double ABSaverage(std::vector<double> vec, int from, int to) {
 	for (int i = from; i < to; i++) {
 		temp += abs(vec[i]);
 	}
-	return temp / (to - from);
+	return temp / (to - from + 1);
 }
 
 //checks ratio between highest high note and the average of them
@@ -216,7 +216,7 @@ SDL_Renderer* renderer;
 void drawLEDs(std::vector<led>& leds) {
 	for (int i = 0; i < LED_NR; i++) {
 		int x = map(i + 1, 0, LED_NR + 1, 0, WINDOW_WIDTH) - (LED_SIZE / 2);// -(LED_SIZE / 2); //floor(((i + 1) * WINDOW_WIDTH) / (LED_NR + 1)) - (LED_SIZE / 2);
-		int y = WINDOW_HEIGHT / 2 - (LED_SIZE / 2);
+		int y = map(i + 1, 0, LED_NR + 1, 0, WINDOW_HEIGHT) - (LED_SIZE / 2);
 		SDL_SetRenderDrawColor(renderer, leds[i].r, leds[i].g, leds[i].b, leds[i].a);
 		SDL_Rect tempLED = { x, y, LED_SIZE, LED_SIZE };
 		SDL_RenderFillRect(renderer, &tempLED);
@@ -564,7 +564,7 @@ int main(int argc, char** args) {
 	std::vector<lightBeam> beams;
 	bool quit = false;
 	uint32_t bassPhase = 0;
-	int maxCooldown = 12, cooldown = 0;
+	int maxCooldown = 8, cooldown = 0, maxResetCooldown = RefreshRate;
 	SDL_Event e;
 	CArray wave(gBufferByteMaxPosition);
 	double maxBass = 0, maxMidtone = 0;
@@ -618,7 +618,17 @@ int main(int argc, char** args) {
 
 			//std::cout << highRatio << "\n";
 
-			//drawWave(final);
+			//drawWave(midtones);
+
+			if (maxVolume(midtones) <= maxMidtone*0.05) {
+				if (maxResetCooldown <= 0) {
+					maxMidtone = 0;
+					maxBass = 0;
+					std::cout << "Max volumes reset!\n";
+				}
+				else maxResetCooldown--;
+			}
+			else maxResetCooldown = RefreshRate;
 
 			maxBass = std::max(bass, maxBass);
 			maxMidtone = std::max(maxVolume(midtones), maxMidtone);
@@ -633,13 +643,13 @@ int main(int argc, char** args) {
 
 			for (int i = 0; i < LED_NR; i++) {
 
-				leds[i].SetBrightness(0.90);
+				//leds[i].SetBrightness(0.9);
 
-				float targetBrightness = map(maxVolume(midtones), 0, maxMidtone*0.8, 0.05, 1.0);
+				float targetBrightness = map(maxVolume(midtones), 0, std::max(maxVolume(midtones),maxMidtone*0.9), 0.05, 1.0);
 				//float targetBrightness = map(midtones[map(i, 0, LED_NR - 1, 0, midtones.size() - 1)], 0, maxMidtone, 0.3, 1.0);
-				bool setBrightness = true;
+				/*bool setBrightness = true;
 
-				if (leds[i].maxBrightness() > targetBrightness) setBrightness = false;
+				if (leds[i].maxBrightness() > targetBrightness) setBrightness = false;*/
 
 				//set the color based on bass
 				leds[i].SetColorHue((bassPhase + i*2) % 1536);
