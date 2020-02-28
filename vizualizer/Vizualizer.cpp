@@ -2,7 +2,7 @@
 #include <SDL.h>
 #include <vector>
 #include <algorithm>
-#include <sstream>
+//#include <sstream>
 #include <deque>
 #include "FFT.h"
 
@@ -216,7 +216,7 @@ SDL_Renderer* renderer;
 void drawLEDs(std::vector<led>& leds) {
 	for (int i = 0; i < LED_NR; i++) {
 		int x = map(i + 1, 0, LED_NR + 1, 0, WINDOW_WIDTH) - (LED_SIZE / 2);// -(LED_SIZE / 2); //floor(((i + 1) * WINDOW_WIDTH) / (LED_NR + 1)) - (LED_SIZE / 2);
-		int y = map(i + 1, 0, LED_NR + 1, 0, WINDOW_HEIGHT) - (LED_SIZE / 2);
+		int y = WINDOW_HEIGHT / 2;
 		SDL_SetRenderDrawColor(renderer, leds[i].r, leds[i].g, leds[i].b, leds[i].a);
 		SDL_Rect tempLED = { x, y, LED_SIZE, LED_SIZE };
 		SDL_RenderFillRect(renderer, &tempLED);
@@ -263,11 +263,11 @@ void drawWave(std::vector<double> wave) {
 		int x2 = map(i, 1, wave.size(), 10, WINDOW_WIDTH - 10);
 		//std::cout <<  wave[i] << " ";
 		SDL_SetRenderDrawColor(renderer, 0, map(i, 0, wave.size(), 0, 255), 255 - map(i, 1, wave.size(), 0, 255), 255);
-		SDL_Rect temp = { x2, y2, 5, amp };
-		SDL_RenderFillRect(renderer, &temp);
-		//SDL_RenderDrawLine(renderer,x2, y1, x2, y2);
-		//x1 = x2;
-		//y1 = y2;
+		//SDL_Rect temp = { x2, y2, 5, amp };
+		//SDL_RenderFillRect(renderer, &temp);
+		SDL_RenderDrawLine(renderer,x1, y1, x2, y2);
+		x1 = x2;
+		y1 = y2;
 		if (!i) i++;
 	}
 	SDL_RenderPresent(renderer);
@@ -563,7 +563,7 @@ int main(int argc, char** args) {
 	std::vector<double> final(gBufferByteMaxPosition/2, 0);
 	std::vector<lightBeam> beams;
 	bool quit = false;
-	uint32_t bassPhase = 0;
+	uint32_t bassPhase = 0, standbyPhase = 0;
 	int maxCooldown = 8, cooldown = 0, maxResetCooldown = RefreshRate;
 	SDL_Event e;
 	CArray wave(gBufferByteMaxPosition);
@@ -579,7 +579,7 @@ int main(int argc, char** args) {
 		
 		dampenWave(final);
 
-		if (gBufferBytePosition > gBufferByteMaxPosition){
+		if (gBufferBytePosition > gBufferByteMaxPosition) {
 			SDL_LockAudioDevice(recordingDeviceId);
 			gBufferBytePosition = 0;
 			//int maxVol = 0;
@@ -601,8 +601,8 @@ int main(int argc, char** args) {
 			/*for (int i = 0; i < map(maxVol, 0, 128, 1, LED_NR); i++) {
 				leds[i] = test[i];
 			}*/
-			
-			
+
+
 
 			fft(wave);
 
@@ -620,11 +620,11 @@ int main(int argc, char** args) {
 
 			//drawWave(midtones);
 
-			if (maxVolume(midtones) <= maxMidtone*0.05) {
+			if (maxVolume(midtones) <= maxMidtone * 0.05) {
 				if (maxResetCooldown <= 0) {
 					maxMidtone = 0;
 					maxBass = 0;
-					std::cout << "Max volumes reset!\n";
+					//std::cout << "Max volumes reset!\n";
 				}
 				else maxResetCooldown--;
 			}
@@ -633,47 +633,64 @@ int main(int argc, char** args) {
 			maxBass = std::max(bass, maxBass);
 			maxMidtone = std::max(maxVolume(midtones), maxMidtone);
 
-			if (bass >= maxBass*0.55 && cooldown <= 0) {
+			if (bass >= maxBass * 0.55 && cooldown <= 0) {
 				lightBeam temp;
 				beams.push_back(temp);
 				cooldown = maxCooldown;
 			}
 
 			bassPhase += (int)map(bass, 0, maxBass, 0, 32);
-
-			for (int i = 0; i < LED_NR; i++) {
-
-				//leds[i].SetBrightness(0.9);
-
-				float targetBrightness = map(maxVolume(midtones), 0, std::max(maxVolume(midtones),maxMidtone*0.9), 0.05, 1.0);
-				//float targetBrightness = map(midtones[map(i, 0, LED_NR - 1, 0, midtones.size() - 1)], 0, maxMidtone, 0.3, 1.0);
-				/*bool setBrightness = true;
-
-				if (leds[i].maxBrightness() > targetBrightness) setBrightness = false;*/
-
-				//set the color based on bass
-				leds[i].SetColorHue((bassPhase + i*2) % 1536);
-
-				//set the brightness based on midtone volume
-				
-				
-				
-				 //if (setBrightness) 
-					 leds[i].SetBrightness(targetBrightness);
-			}
-
-			for (int i = 0; i < beams.size(); i++) {
-				if (beams[i].position >= LED_NR) {
-					beams.erase(beams.begin() + i);
-					i--;
-				}
-				else {
-					beams[i].speed = (int)map(bass, 0, maxBass, beams[i].initialSpeed, beams[i].initialSpeed*3);
-					beams[i].update(leds);
+			
+			/*if (maxResetCooldown){
+				for (int i = 0; i < LED_NR; i++) {
+					leds[i].SetColorHue((bassPhase + i * 2) % 1536);
 				}
 			}
+			else*/
+			
+			float targetBrightness = map(maxVolume(midtones), 0, std::max(maxVolume(midtones), maxMidtone * 0.9), 0.05, 1.0);
+			//std::cout << targetBrightness << "\n";
+			if (!isnan(targetBrightness)){
+				for (int i = 0; i < LED_NR; i++) {
 
+					//leds[i].SetBrightness(0.9);
+
+					
+					//float targetBrightness = map(midtones[map(i, 0, LED_NR - 1, 0, midtones.size() - 1)], 0, maxMidtone, 0.3, 1.0);
+					/*bool setBrightness = true;
+
+					if (leds[i].maxBrightness() > targetBrightness) setBrightness = false;*/
+
+					//set the color based on bass
+					leds[i].SetColorHue((bassPhase + i * 2) % 1536);
+
+					//set the brightness based on midtone volume
+
+
+
+					 //if (setBrightness) 
+					leds[i].SetBrightness(targetBrightness);
+				}
+
+				for (int i = 0; i < beams.size(); i++) {
+					if (beams[i].position >= LED_NR) {
+						beams.erase(beams.begin() + i);
+						i--;
+					}
+					else {
+						beams[i].speed = (int)map(bass, 0, maxBass, beams[i].initialSpeed, beams[i].initialSpeed * 3);
+						beams[i].update(leds);
+					}
+				}
+			} else {
+				for (int i = 0; i < LED_NR; i++) {
+					leds[i].SetColorHue((standbyPhase + i * 2) % 1536);
+				}
+			}
+
+			drawWave(final);
 			drawLEDs(leds);
+			standbyPhase++;
 			bassPhase++;
 			cooldown--;
 			SDL_UnlockAudioDevice(recordingDeviceId);
